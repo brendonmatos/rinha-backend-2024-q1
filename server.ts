@@ -1,5 +1,5 @@
 // @ts-ignore
-import {Pool } from 'pg'
+import { Pool } from 'pg'
 
 
 const pool = new Pool({
@@ -13,23 +13,28 @@ const pool = new Pool({
 const UPDATE_CUSTOMER_QUERY = `UPDATE clientes SET saldo = $1, transacoes = $2 WHERE id = $3;`;
 const SELECT_CUSTOMER_BY_ID = (id: number) => `SELECT * FROM clientes WHERE id = ${id}`;
 
-
 const IS_CLIENTES_TRANSACOES = /clientes\/(\d+)\/transacoes$/;
 const IS_CLIENTES_EXTRATO = /clientes\/(\d+)\/extrato$/;
+const GET_CUSTOMER_ID_REGEX = /clientes\/(\d+)\//;
 
-
-const handleTransaction = async (req: Request) => {
-  const matches = req.url.match(IS_CLIENTES_TRANSACOES);
+const useValidatedCustomerId = (url: string) => {
+  const matches = url.match(GET_CUSTOMER_ID_REGEX);
 
   if (!matches) {
-    return { status: 404 };
+    throw new Error("Invalid URL");
   }
 
   const customerId = parseInt(matches[1]);
 
-  if (!customerId || customerId <= 0 || customerId > 5) {
-    return { status: 404 };
+  if (!customerId || customerId <= 0) {
+    throw new Error("Invalid URL");
   }
+
+  return customerId;
+}
+
+const handleTransaction = async (req: Request) => {
+  const customerId = useValidatedCustomerId(req.url);
 
   const { valor, tipo, descricao } = await req.json() as {
     valor: number;
@@ -111,23 +116,11 @@ const handleTransaction = async (req: Request) => {
 
 }
 
+
+
 const handleExtrato = async (req: Request) => {
-  const matches = req.url.match(IS_CLIENTES_EXTRATO);
-
-  if (!matches) {
-    return { status: 404 };
-  }
-
-  const customerId = parseInt(matches[1]);
-
-  if (!customerId || customerId <= 0 || customerId > 5) {
-    return { status: 404 };
-  }
-
+  const customerId = useValidatedCustomerId(req.url);
   const { rows } = await pool.query(SELECT_CUSTOMER_BY_ID(customerId));
-
-
-
   return {
     status: 200,
     body: {
@@ -149,8 +142,6 @@ Bun.serve({
   port: process.env.API_PORT,
   websocket: undefined as any,
   async fetch(req) {
-    // console.log(`METHOD: ${req.method} - URL: ${req.url}`);
-
     if (req.method === "POST" && IS_CLIENTES_TRANSACOES.test(req.url)) {
       const result = await handleTransaction(req);
       const response = new Response(JSON.stringify(result.body), {

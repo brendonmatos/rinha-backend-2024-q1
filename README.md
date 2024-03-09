@@ -1,5 +1,9 @@
 # rinha
 
+## IMPORTANTE 
+
+Projeto em BUN mas com referências fortes ao projeto escrito pelo Matheus em node [https://github.com/trindadematheus/rinha-backend-2024-q1-nodejs](Link projeto).
+
 To install dependencies:
 
 ```bash
